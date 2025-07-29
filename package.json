@@ -1,0 +1,62 @@
+{
+    "name": "nodejs-gcp-log-correlation",
+    "version": "1.0.0",
+    "description": "A Node.js package for automatic log correlation in Google Cloud Platform using trace context",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "clean": "rm -rf dist",
+        "prepublishOnly": "pnpm run clean && pnpm run build && pnpm run lint",
+        "lint": "eslint",
+        "lint:fix": "eslint --fix",
+        "format": "prettier --write src/**/*.ts",
+        "test": "echo \"No tests specified\" && exit 0"
+    },
+    "keywords": [
+        "gcp",
+        "google-cloud",
+        "logging",
+        "trace",
+        "correlation",
+        "winston",
+        "nodejs",
+        "express",
+        "cloud-functions"
+    ],
+    "author": {
+        "name": "RobinJesba",
+        "url": "https://github.com/RobinJesba"
+    },
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/RobinJesba/nodejs-gcp-log-correlation.git"
+    },
+    "bugs": {
+        "url": "https://github.com/RobinJesba/nodejs-gcp-log-correlation/issues"
+    },
+    "homepage": "https://github.com/RobinJesba/nodejs-gcp-log-correlation#readme",
+    "files": [
+        "dist/",
+        "README.md"
+    ],
+    "engines": {
+        "node": ">=16.0.0"
+    },
+    "dependencies": {
+        "winston": "^3.11.0",
+        "@google-cloud/logging-winston": "^5.3.0"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.32.0",
+        "@types/express": "^5.0.0",
+        "@types/node": "^24.1.0",
+        "@typescript-eslint/eslint-plugin": "^8.38.0",
+        "@typescript-eslint/parser": "^8.38.0",
+        "eslint": "^9.32.0",
+        "prettier": "^3.1.0",
+        "typescript": "^5.2.2"
+    },
+    "packageManager": "pnpm@10.13.0"
+}
