@@ -1,6 +1,6 @@
 {
     "name": "nodejs-gcp-log-correlation",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "A Node.js package for automatic log correlation in Google Cloud Platform using trace context",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
