@@ -3,10 +3,7 @@ import type { TraceContext } from './types';
 
 const asyncLocalStorage = new AsyncLocalStorage<TraceContext>();
 
-export const runWithContext = (
-  context: TraceContext,
-  callback: () => void,
-): void => {
+export const runWithContext = (context: TraceContext, callback: () => void): void => {
   asyncLocalStorage.run(context, callback);
 };
 

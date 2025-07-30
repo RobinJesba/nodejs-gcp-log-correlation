@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 
 export interface HttpRequest {
   (req: Request, res: Response): any;
@@ -19,17 +19,4 @@ export interface WrappedLogger {
   warn: (message: string, meta?: Record<string, any>) => void;
   error: (message: string, meta?: Record<string, any>) => void;
   debug: (message: string, meta?: Record<string, any>) => void;
-}
-
-export type ExpressMiddleware = (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => void;
-
-export interface LogCorrelationResult {
-  logger: WrappedLogger;
-  middleware?: ExpressMiddleware;
-  runWithContext: (context: TraceContext, callback: () => void) => void;
-  getContext: () => TraceContext;
 }

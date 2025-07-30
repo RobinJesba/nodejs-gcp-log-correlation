@@ -3,12 +3,33 @@ import { LoggingWinston } from '@google-cloud/logging-winston';
 import { getContext } from './context-manager';
 import type { WrappedLogger, LogCorrelationConfig } from './types';
 
-export let logger: WrappedLogger | Console = console;
+export let logger: WrappedLogger | typeof console = console;
 let isInitialized = false;
 
-function createLoggerConfig(
-  config: Required<LogCorrelationConfig>,
-): winston.LoggerOptions {
+const createProxyLogger = (): WrappedLogger => {
+  return {
+    info: (message: string, meta?: Record<string, any>) => {
+      if (!isInitialized) initializeLogger();
+      return (logger as WrappedLogger).info(message, meta);
+    },
+    warn: (message: string, meta?: Record<string, any>) => {
+      if (!isInitialized) initializeLogger();
+      return (logger as WrappedLogger).warn(message, meta);
+    },
+    error: (message: string, meta?: Record<string, any>) => {
+      if (!isInitialized) initializeLogger();
+      return (logger as WrappedLogger).error(message, meta);
+    },
+    debug: (message: string, meta?: Record<string, any>) => {
+      if (!isInitialized) initializeLogger();
+      return (logger as WrappedLogger).debug(message, meta);
+    },
+  };
+};
+
+export const proxyLogger = createProxyLogger();
+
+function createLoggerConfig(config: Required<LogCorrelationConfig>): winston.LoggerOptions {
   const isLocalDevelopment = config.environment === 'development';
 
   if (isLocalDevelopment) {
@@ -18,8 +39,7 @@ function createLoggerConfig(
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.printf(({ level, message, timestamp, ...meta }) => {
-          const metaStr =
-            Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : '';
+          const metaStr = Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : '';
           return `[${timestamp}] ${level.toUpperCase()}: ${message}${metaStr}`;
         }),
       ),
@@ -33,13 +53,10 @@ function createLoggerConfig(
   };
 }
 
-function wrapLoggerWithContext(
-  logger: winston.Logger,
-  config: Required<LogCorrelationConfig>,
-): WrappedLogger {
+function wrapLoggerWithContext(logger: winston.Logger, config: Required<LogCorrelationConfig>): WrappedLogger {
   const logLevels = ['info', 'warn', 'error', 'debug'] as const;
   const wrapped: Partial<WrappedLogger> = {};
-  logLevels.forEach((level) => {
+  logLevels.forEach(level => {
     wrapped[level] = (message: string, meta: Record<string, any> = {}) => {
       const context = getContext();
       let logMeta = { ...meta };
@@ -59,8 +76,8 @@ function wrapLoggerWithContext(
   return wrapped as WrappedLogger;
 }
 
-export function initializeLogger(): WrappedLogger {
-  if (isInitialized && logger !== console) return logger as WrappedLogger;
+export function initializeLogger() {
+  if (isInitialized && logger !== console) return;
 
   const environment = process.env.NODE_ENV || 'development';
   const config = {
@@ -70,22 +87,15 @@ export function initializeLogger(): WrappedLogger {
   };
 
   if (environment !== 'development' && !config.projectId) {
-    console.warn(
-      'nodejs-gcp-log-correlation: No GCP Project ID detected. Trace correlation may not work properly.',
-    );
+    console.warn('nodejs-gcp-log-correlation: No GCP Project ID detected. Trace correlation may not work properly.');
   }
 
   try {
     const loggerConfig = createLoggerConfig(config);
     const winstonLogger = winston.createLogger(loggerConfig);
     logger = wrapLoggerWithContext(winstonLogger, config);
-    isInitialized = true;
-    return logger;
   } catch (error) {
-    console.warn(
-      'Failed to initialize Winston logger, falling back to console:',
-      error,
-    );
-    return console as any;
+    console.warn('Failed to initialize Winston logger, falling back to console:', error);
   }
+  isInitialized = true;
 }
