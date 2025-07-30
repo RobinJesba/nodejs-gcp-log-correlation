@@ -16,6 +16,6 @@ export function wrapCloudFunction(fn: HttpRequest): HttpRequest {
   return (req: Request, res: Response): any => {
     const traceId = req.header('x-cloud-trace-context')?.split('/')[0];
     const context = traceId ? { trace: traceId } : {};
-    runWithContext(context, fn(req, res));
+    return runWithContext(context, () => fn(req, res));
   };
 }
