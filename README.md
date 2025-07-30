@@ -37,8 +37,10 @@ export const handler = wrapCloudFunction((req, res) => {
 ```
 
 ## Environment
+
 - `NODE_ENV`
 - `GOOGLE_CLOUD_PROJECT`
 
 ## License
+
 MIT
