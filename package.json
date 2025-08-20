@@ -64,6 +64,9 @@
     "tsup": "^8.5.0",
     "typescript": "^5.2.2"
   },
+  "peerDependencies": {
+    "@google-cloud/functions-framework": ">=3.0.0"
+  },
   "packageManager": "pnpm@10.13.0",
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": "eslint --fix",
