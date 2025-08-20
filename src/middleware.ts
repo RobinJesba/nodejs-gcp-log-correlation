@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { runWithContext } from './context-manager';
-import type { HttpRequest } from './types';
+import type { HttpFunction } from '@google-cloud/functions-framework';
 
 export function loggerMiddleware() {
   return (req: Request, _: Response, next: NextFunction): void => {
@@ -12,7 +12,7 @@ export function loggerMiddleware() {
   };
 }
 
-export function wrapCloudFunction(fn: HttpRequest): HttpRequest {
+export function wrapCloudFunction(fn: HttpFunction): HttpFunction {
   return (req: Request, res: Response): any => {
     const traceId = req.header('x-cloud-trace-context')?.split('/')[0];
     const context = traceId ? { trace: traceId } : {};
