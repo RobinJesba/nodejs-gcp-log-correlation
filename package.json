@@ -47,6 +47,8 @@
   },
   "dependencies": {
     "@google-cloud/logging-winston": "^6.0.1",
+    "@logtape/adaptor-winston": "^2.0.2",
+    "@logtape/logtape": "^2.0.2",
     "winston": "^3.17.0"
   },
   "devDependencies": {

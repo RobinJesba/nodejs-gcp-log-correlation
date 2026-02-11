@@ -11,6 +11,12 @@ importers:
       '@google-cloud/logging-winston':
         specifier: ^6.0.1
         version: 6.0.1(winston@3.17.0)
+      '@logtape/adaptor-winston':
+        specifier: ^2.0.2
+        version: 2.0.2(@logtape/logtape@2.0.2)(winston@3.17.0)
+      '@logtape/logtape':
+        specifier: ^2.0.2
+        version: 2.0.2
       winston:
         specifier: ^3.17.0
         version: 3.17.0
@@ -329,6 +335,15 @@ packages:
 
   '@js-sdsl/ordered-map@4.4.2':
     resolution: {integrity: sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw==}
+
+  '@logtape/adaptor-winston@2.0.2':
+    resolution: {integrity: sha512-91Jvm2kj9nV3pTBgZM5/MysxnRuBZkcWoZvwPqeCZO0cUkfNURbdK24dmdE1Pyq+jJwKU6Oqp72K2mhBJW0nQQ==}
+    peerDependencies:
+      '@logtape/logtape': ^2.0.2
+      winston: ^3.17.0
+
+  '@logtape/logtape@2.0.2':
+    resolution: {integrity: sha512-cveUBLbCMFkvkLycP/2vNWvywl47JcJbazHIju94/QNGboZ/jyYAgZIm0ZXezAOx3eIz8OG1EOZ5CuQP3+2FQg==}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -1953,6 +1968,13 @@ snapshots:
       '@jridgewell/sourcemap-codec': 1.5.4
 
   '@js-sdsl/ordered-map@4.4.2': {}
+
+  '@logtape/adaptor-winston@2.0.2(@logtape/logtape@2.0.2)(winston@3.17.0)':
+    dependencies:
+      '@logtape/logtape': 2.0.2
+      winston: 3.17.0
+
+  '@logtape/logtape@2.0.2': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
