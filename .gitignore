@@ -50,6 +50,9 @@ web_modules/
 # Optional npm cache directory
 .npm
 
+# npm auth config (do not commit tokens)
+.npmrc
+
 # Optional eslint cache
 .eslintcache
 
