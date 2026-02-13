@@ -1,6 +1,6 @@
 {
   "name": "nodejs-gcp-log-correlation",
-  "version": "2.0.1",
+  "version": "2.1.1",
   "description": "LogTape-based GCP log correlation — automatic trace propagation for any dependency",
   "type": "module",
   "main": "dist/index.js",
