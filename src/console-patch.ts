@@ -18,6 +18,24 @@ const severityMap: Record<string, string> = {
   debug: 'DEBUG',
 };
 
+// ── ANSI escape codes for colored console-patch output ──────────────
+const ANSI = {
+  reset: '\x1b[0m',
+  dim: '\x1b[2m',
+  cyan: '\x1b[36m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  red: '\x1b[31m',
+  blue: '\x1b[34m',
+} as const;
+
+const severityColor: Record<string, string> = {
+  DEBUG: ANSI.blue,
+  INFO: ANSI.green,
+  WARNING: ANSI.yellow,
+  ERROR: ANSI.red,
+};
+
 /**
  * Monkey-patch the global `console` methods so that **every** call —
  * including those from third-party dependencies you don't control —
@@ -35,7 +53,7 @@ const severityMap: Record<string, string> = {
  *
  * @internal Called automatically by `configureGcpLogging()`.
  */
-export function patchConsole(isDev: boolean): void {
+export function patchConsole(isDev: boolean, colorize = false): void {
   for (const method of Object.keys(originals) as Array<keyof typeof originals>) {
     const original = originals[method];
     const severity = severityMap[method];
@@ -50,9 +68,16 @@ export function patchConsole(isDev: boolean): void {
       }
 
       if (isDev) {
-        // Dev: human-readable tag
+        // Dev: human-readable tag (optionally colored)
         const shortTrace = ctx.trace.split('/').pop();
-        original(`[trace:${shortTrace}]`, ...args);
+        if (colorize) {
+          const traceTag = `${ANSI.cyan}[trace:${shortTrace}]${ANSI.reset}`;
+          const sevColor = severityColor[severity] ?? '';
+          const sevTag = `${sevColor}${severity}${ANSI.reset}`;
+          original(`${traceTag} ${sevTag}`, ...args);
+        } else {
+          original(`[trace:${shortTrace}]`, ...args);
+        }
         return;
       }
 

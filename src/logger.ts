@@ -1,11 +1,10 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { configure } from '@logtape/logtape';
+import { configure, getConsoleSink, ansiColorFormatter, getLogger } from '@logtape/logtape';
 import { getWinstonSink } from '@logtape/adaptor-winston';
 import winston from 'winston';
 import { LoggingWinston } from '@google-cloud/logging-winston';
 import { setProjectId, setContextStorage, detectProjectId } from './context-manager';
 import { patchConsole } from './console-patch';
-import { getLogger } from '@logtape/logtape';
 import type { GcpLoggingConfig } from './types';
 
 /**
@@ -67,48 +66,53 @@ export async function configureGcpLogging(options: GcpLoggingConfig = {}): Promi
   }
 
   // ── Patch global console (default: true) ──────────────────────────
+  const colorize = options.colorize !== false && isDev;
   if (options.patchConsole !== false) {
-    patchConsole(isDev);
+    patchConsole(isDev, colorize);
   }
 
-  // ── Winston logger ────────────────────────────────────────────────
-  const winstonLogger = isDev
-    ? winston.createLogger({
-        level: logLevel,
-        transports: [new winston.transports.Console()],
-        format: winston.format.combine(
-          winston.format.timestamp(),
-          winston.format.printf(({ level, message, timestamp, ...meta }) => {
-            const metaStr = Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : '';
-            return `[${timestamp}] ${level.toUpperCase()}: ${message}${metaStr}`;
-          }),
-        ),
-      })
-    : winston.createLogger({
-        level: logLevel,
-        transports: [
-          new LoggingWinston({
-            projectId,
-            serviceContext: options.serviceName ? { service: options.serviceName } : undefined,
-          }),
-        ],
-        format: winston.format.json(),
-      });
-
-  // ── LogTape configuration ─────────────────────────────────────────
+  // ── Sink selection ────────────────────────────────────────────────
   const contextLocalStorage = new AsyncLocalStorage<Record<string, unknown>>();
   setContextStorage(contextLocalStorage);
 
-  await configure({
-    sinks: {
-      gcp: getWinstonSink(winstonLogger),
-    },
-    loggers: [
-      { category: [], sinks: ['gcp'], lowestLevel: mapToLogtapeLevel(logLevel) },
-      { category: ['logtape', 'meta'], sinks: ['gcp'], lowestLevel: 'warning' },
-    ],
-    contextLocalStorage,
-  });
+  if (isDev) {
+    // Dev: use LogTape's native console sink with ANSI colors (no Winston needed)
+    await configure({
+      sinks: {
+        console: getConsoleSink({
+          formatter: colorize ? ansiColorFormatter : undefined,
+        }),
+      },
+      loggers: [
+        { category: [], sinks: ['console'], lowestLevel: mapToLogtapeLevel(logLevel) },
+        { category: ['logtape', 'meta'], sinks: ['console'], lowestLevel: 'warning' },
+      ],
+      contextLocalStorage,
+    });
+  } else {
+    // Production: GCP Cloud Logging via Winston
+    const winstonLogger = winston.createLogger({
+      level: logLevel,
+      transports: [
+        new LoggingWinston({
+          projectId,
+          serviceContext: options.serviceName ? { service: options.serviceName } : undefined,
+        }),
+      ],
+      format: winston.format.json(),
+    });
+
+    await configure({
+      sinks: {
+        gcp: getWinstonSink(winstonLogger),
+      },
+      loggers: [
+        { category: [], sinks: ['gcp'], lowestLevel: mapToLogtapeLevel(logLevel) },
+        { category: ['logtape', 'meta'], sinks: ['gcp'], lowestLevel: 'warning' },
+      ],
+      contextLocalStorage,
+    });
+  }
 
   configuredOnce = true;
 }

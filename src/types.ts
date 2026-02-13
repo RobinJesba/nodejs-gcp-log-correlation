@@ -22,4 +22,19 @@ export interface GcpLoggingConfig {
    * @default true
    */
   patchConsole?: boolean;
+  /**
+   * Enable ANSI-colored log output in development mode.
+   *
+   * When `true` (the default in development), log levels are color-coded
+   * (debug = blue, info = green, warning = yellow, error = red) and
+   * timestamps / categories are dimmed for readability.
+   *
+   * Set to `false` to get plain text output, e.g. when piping to a file
+   * or running in CI where ANSI codes are unwanted.
+   *
+   * Has no effect in production — production always outputs structured JSON.
+   *
+   * @default true (in development)
+   */
+  colorize?: boolean;
 }
