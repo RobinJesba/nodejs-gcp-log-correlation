@@ -1,4 +1,3 @@
-import type { Request, Response, NextFunction } from 'express';
 import { withContext } from '@logtape/logtape';
 import { TRACE_KEY, SPAN_KEY, getProjectId } from './context-manager';
 import { ensureConfigured } from './logger';
@@ -14,10 +13,14 @@ import { ensureConfigured } from './logger';
  * dependencies — will automatically include the trace fields while inside this
  * context.
  */
-export function loggerMiddleware() {
+export function loggerMiddleware(): (
+  req: { header(name: string): string | undefined },
+  res: unknown,
+  next: (err?: unknown) => void
+) => void {
   const ready = ensureConfigured();
 
-  return (req: Request, _: Response, next: NextFunction): void => {
+  return (req, _res, next): void => {
     ready
       .then(() => {
         const traceHeader = req.header('x-cloud-trace-context');

@@ -33,7 +33,7 @@ export function getTraceContext(): { trace?: string } {
   const store = contextStorage.getStore();
   if (!store) return {};
   return {
-    trace: typeof store[TRACE_KEY] === 'string' ? (store[TRACE_KEY] as string) : undefined,
+    trace: typeof store[TRACE_KEY] === 'string' ? store[TRACE_KEY] : undefined,
   };
 }
 
@@ -45,8 +45,8 @@ export function getFullTraceContext(): { trace?: string; spanId?: string } {
   const store = contextStorage.getStore();
   if (!store) return {};
   return {
-    trace: typeof store[TRACE_KEY] === 'string' ? (store[TRACE_KEY] as string) : undefined,
-    spanId: typeof store[SPAN_KEY] === 'string' ? (store[SPAN_KEY] as string) : undefined,
+    trace: typeof store[TRACE_KEY] === 'string' ? store[TRACE_KEY] : undefined,
+    spanId: typeof store[SPAN_KEY] === 'string' ? store[SPAN_KEY] : undefined,
   };
 }
 
