@@ -12,6 +12,22 @@ import { ensureConfigured } from './logger';
  * Every `logger.*` or `console.*` call — in your code **or** in third-party
  * dependencies — will automatically include the trace fields while inside this
  * context.
+ *
+ * @example
+ * ```typescript
+ * import express from 'express';
+ * import { loggerMiddleware, logger } from 'nodejs-gcp-log-correlation';
+ *
+ * const app = express();
+ * app.use(loggerMiddleware());
+ *
+ * app.get('/', (req, res) => {
+ *   logger.info('Request processed');
+ *   res.json({ status: 'ok' });
+ * });
+ *
+ * app.listen(8080);
+ * ```
  */
 export function loggerMiddleware(): (
   req: { header(name: string): string | undefined },
@@ -44,6 +60,16 @@ export function loggerMiddleware(): (
  *
  * Automatically initialises the library on first use if `configureGcpLogging()`
  * was not called explicitly.
+ *
+ * @example
+ * ```typescript
+ * import { wrapCloudRunFunction, logger } from 'nodejs-gcp-log-correlation';
+ *
+ * export const handler = wrapCloudRunFunction((req, res) => {
+ *   logger.info('Function executed');
+ *   res.send('Done!');
+ * });
+ * ```
  */
 export function wrapCloudRunFunction<T extends (...args: any[]) => any>(fn: T): T {
   const ready = ensureConfigured();
