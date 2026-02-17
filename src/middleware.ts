@@ -63,6 +63,53 @@ export function wrapCloudRunFunction<T extends (...args: any[]) => any>(fn: T): 
   }) as T;
 }
 
+/**
+ * Hono middleware that extracts the GCP trace header and scopes it as
+ * LogTape implicit context for the lifetime of the request.
+ *
+ * Automatically initialises the library on first use if `configureGcpLogging()`
+ * was not called explicitly.
+ *
+ * Every `logger.*` or `console.*` call — in your code **or** in third-party
+ * dependencies — will automatically include the trace fields while inside this
+ * context.
+ *
+ * @example
+ * ```typescript
+ * import { Hono } from 'hono';
+ * import { honoLoggerMiddleware, logger } from 'nodejs-gcp-log-correlation';
+ *
+ * const app = new Hono();
+ * app.use(honoLoggerMiddleware());
+ *
+ * app.get('/', (c) => {
+ *   logger.info('Request processed');
+ *   return c.json({ status: 'ok' });
+ * });
+ * ```
+ */
+export function honoLoggerMiddleware(): (
+  c: { req: { header(name: string): string | undefined } },
+  next: () => Promise<void>
+) => Promise<void> {
+  const ready = ensureConfigured();
+
+  return async (c, next) => {
+    await ready;
+
+    const traceHeader = c.req.header('x-cloud-trace-context');
+    if (!traceHeader) {
+      await next();
+      return;
+    }
+
+    const context = parseTraceHeader(traceHeader);
+    await withContext(context, async () => {
+      await next();
+    });
+  };
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────
 
 function parseTraceHeader(header: string): Record<string, string> {

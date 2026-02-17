@@ -4,6 +4,8 @@ Automatic GCP Cloud Logging trace correlation for Node.js.
 
 Add the middleware, import `logger`, and **every** log — including `console.log()` calls from third-party dependencies — is automatically correlated with the active request trace in GCP Cloud Logging. Zero configuration required.
 
+Supports **Express**, **Hono**, and **Cloud Run Functions** out of the box.
+
 ## Installation
 
 ```bash
@@ -41,13 +43,31 @@ export const handler = wrapCloudRunFunction((req, res) => {
 });
 ```
 
+### Hono
+
+```typescript
+import { Hono } from 'hono';
+import { honoLoggerMiddleware, logger } from 'nodejs-gcp-log-correlation';
+
+const app = new Hono();
+app.use(honoLoggerMiddleware());
+
+app.get('/', c => {
+  logger.info('Request processed'); // ← correlated
+  console.log('Also correlated!'); // ← correlated (even from dependencies)
+  return c.json({ status: 'ok' });
+});
+
+export default app;
+```
+
 ### Third-party dependencies
 
 Any dependency that calls `console.log`, `console.error`, etc. is automatically correlated — no changes needed on their side.
 
 ## How it works
 
-1. `loggerMiddleware()` or `wrapCloudRunFunction()` auto-initialises the library on first use — setting up structured logging, auto-detecting the GCP project ID, and patching global `console` methods.
+1. `loggerMiddleware()`, `honoLoggerMiddleware()`, or `wrapCloudRunFunction()` auto-initialises the library on first use — setting up structured logging, auto-detecting the GCP project ID, and patching global `console` methods.
 2. The middleware extracts the `x-cloud-trace-context` header and scopes the trace to the request’s async lifecycle via `AsyncLocalStorage`.
 3. Every `logger.*` and `console.*` call within that lifecycle includes the `logging.googleapis.com/trace` field, making logs correlated in Cloud Logging Explorer.
 
@@ -73,6 +93,10 @@ logger.info({ event: 'login', userId: 'u_123' });
 ### `loggerMiddleware()`
 
 Express middleware. Extracts the trace header and scopes it to the request lifecycle. Auto-initialises the library on first use.
+
+### `honoLoggerMiddleware()`
+
+Hono middleware. Extracts the trace header and scopes it to the request lifecycle using Hono's async middleware signature (`(c, next) => Promise<void>`). Auto-initialises the library on first use.
 
 ### `wrapCloudRunFunction(fn)`
 

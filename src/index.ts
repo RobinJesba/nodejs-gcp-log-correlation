@@ -5,7 +5,7 @@ export { logger } from './logger';
 export { configureGcpLogging } from './logger';
 
 // ── Middleware ────────────────────────────────────────────────────────
-export { loggerMiddleware, wrapCloudRunFunction } from './middleware';
+export { loggerMiddleware, honoLoggerMiddleware, wrapCloudRunFunction } from './middleware';
 
 // ── Context helpers & constants ──────────────────────────────────────
 export { getTraceContext, TRACE_KEY } from './context-manager';

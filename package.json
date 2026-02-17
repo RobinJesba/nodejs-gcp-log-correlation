@@ -23,6 +23,7 @@
     "winston",
     "nodejs",
     "express",
+    "hono",
     "cloud-functions",
     "cloud-run",
     "structured-logging",
