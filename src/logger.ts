@@ -2,7 +2,6 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { configure, getConsoleSink, ansiColorFormatter, getLogger } from '@logtape/logtape';
 import { getWinstonSink } from '@logtape/adaptor-winston';
 import winston from 'winston';
-import { LoggingWinston } from '@google-cloud/logging-winston';
 import { setProjectId, setContextStorage, detectProjectId } from './context-manager';
 import { patchConsole } from './console-patch';
 import type { GcpLoggingConfig } from './types';
@@ -23,6 +22,14 @@ export const logger = getLogger();
 // ── Lazy auto-init state ─────────────────────────────────────────────
 let configuredOnce = false;
 let initPromise: Promise<void> | null = null;
+
+/**
+ * Returns true if the library has been configured.
+ * @internal Used by middleware to take a synchronous fast-path.
+ */
+export function isConfigured(): boolean {
+  return configuredOnce;
+}
 
 /**
  * Ensure the library is configured. If `configureGcpLogging()` was never
@@ -54,7 +61,7 @@ export function ensureConfigured(): Promise<void> {
  * startup, **before** the middleware or any logging runs.
  */
 export async function configureGcpLogging(options: GcpLoggingConfig = {}): Promise<void> {
-  const projectId = await detectProjectId(options.projectId);
+  const projectId = detectProjectId(options.projectId);
   const environment = options.environment || process.env.NODE_ENV || 'development';
   const logLevel = options.logLevel || (environment === 'development' ? 'debug' : 'info');
   const isDev = environment === 'development';
@@ -90,16 +97,42 @@ export async function configureGcpLogging(options: GcpLoggingConfig = {}): Promi
       contextLocalStorage,
     });
   } else {
-    // Production: GCP Cloud Logging via Winston
+    // Production: GCP Cloud Logging via stdout JSON
     const winstonLogger = winston.createLogger({
       level: logLevel,
       transports: [
-        new LoggingWinston({
-          projectId,
-          serviceContext: options.serviceName ? { service: options.serviceName } : undefined,
+        new winston.transports.Console({
+          format: winston.format.printf(info => {
+            const { level, message, ...meta } = info;
+
+            // Map Winston levels to GCP severity
+            const severityMap: Record<string, string> = {
+              silly: 'DEFAULT',
+              trace: 'DEBUG',
+              debug: 'DEBUG',
+              verbose: 'DEBUG',
+              info: 'INFO',
+              warn: 'WARNING',
+              warning: 'WARNING',
+              error: 'ERROR',
+              fatal: 'CRITICAL',
+              critical: 'CRITICAL',
+            };
+
+            const gcpLogEntry: Record<string, unknown> = {
+              severity: severityMap[level] || 'INFO',
+              message,
+              ...meta,
+            };
+
+            if (options.serviceName) {
+              gcpLogEntry.serviceContext = { service: options.serviceName };
+            }
+
+            return JSON.stringify(gcpLogEntry);
+          }),
         }),
       ],
-      format: winston.format.json(),
     });
 
     await configure({

@@ -56,11 +56,10 @@ export function getFullTraceContext(): { trace?: string; spanId?: string } {
  * Resolve the GCP project ID automatically:
  *   1. Explicit value passed by caller
  *   2. Environment variables (`GOOGLE_CLOUD_PROJECT`, `GCLOUD_PROJECT`, `GCP_PROJECT`)
- *   3. GCP metadata server (works on Cloud Run, GCE, GKE, Cloud Functions)
  *
  * @internal
  */
-export async function detectProjectId(explicit?: string): Promise<string> {
+export function detectProjectId(explicit?: string): string {
   if (explicit) return explicit;
 
   return process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT || '';

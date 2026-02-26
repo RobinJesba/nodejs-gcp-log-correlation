@@ -1,6 +1,6 @@
 import { withContext } from '@logtape/logtape';
 import { TRACE_KEY, SPAN_KEY, getProjectId } from './context-manager';
-import { ensureConfigured } from './logger';
+import { ensureConfigured, isConfigured } from './logger';
 
 /**
  * Express middleware that extracts the GCP trace header and scopes it as
@@ -37,20 +37,24 @@ export function loggerMiddleware(): (
   const ready = ensureConfigured();
 
   return (req, _res, next): void => {
-    ready
-      .then(() => {
-        const traceHeader = req.header('x-cloud-trace-context');
-        if (!traceHeader) {
-          next();
-          return;
-        }
+    const run = () => {
+      const traceHeader = req.header('x-cloud-trace-context');
+      if (!traceHeader) {
+        next();
+        return;
+      }
 
-        const context = parseTraceHeader(traceHeader);
-        withContext(context, () => {
-          next();
-        });
-      })
-      .catch(next);
+      const context = parseTraceHeader(traceHeader);
+      withContext(context, () => {
+        next();
+      });
+    };
+
+    if (isConfigured()) {
+      run();
+    } else {
+      ready.then(run).catch(next);
+    }
   };
 }
 
@@ -75,17 +79,25 @@ export function wrapCloudRunFunction<T extends (...args: any[]) => any>(fn: T): 
   const ready = ensureConfigured();
 
   return ((...args: any[]): any => {
-    const req = args[0] as Record<string, any>;
-    const traceHeader: string | undefined =
-      req.header?.('x-cloud-trace-context') ?? req.headers?.['x-cloud-trace-context'];
+    const run = () => {
+      const req = args[0] as Record<string, any>;
+      const traceHeader: string | undefined =
+        req.header?.('x-cloud-trace-context') ?? req.headers?.['x-cloud-trace-context'];
 
-    if (!traceHeader) {
-      return ready.then(() => fn(...args));
+      if (!traceHeader) {
+        return fn(...args);
+      }
+
+      const headerValue = Array.isArray(traceHeader) ? traceHeader[0] : traceHeader;
+      const context = parseTraceHeader(headerValue);
+      return withContext(context, () => fn(...args));
+    };
+
+    if (isConfigured()) {
+      return run();
+    } else {
+      return ready.then(run);
     }
-
-    const headerValue = Array.isArray(traceHeader) ? traceHeader[0] : traceHeader;
-    const context = parseTraceHeader(headerValue);
-    return ready.then(() => withContext(context, () => fn(...args)));
   }) as T;
 }
 
@@ -121,7 +133,9 @@ export function honoLoggerMiddleware(): (
   const ready = ensureConfigured();
 
   return async (c, next) => {
-    await ready;
+    if (!isConfigured()) {
+      await ready;
+    }
 
     const traceHeader = c.req.header('x-cloud-trace-context');
     if (!traceHeader) {
