@@ -1,13 +1,13 @@
 {
   "name": "nodejs-gcp-log-correlation",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "LogTape-based GCP log correlation — automatic trace propagation for any dependency",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsup src/index.ts --dts --minify --format cjs,esm --out-dir dist --clean",
-    "publish": "pnpm run build && npm publish --access public",
+    "prepublishOnly": "pnpm run build",
     "lint": "eslint . --fix",
     "format": "prettier --write .",
     "test": "echo \"No tests specified\" && exit 0",
