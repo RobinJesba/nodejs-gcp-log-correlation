@@ -104,7 +104,7 @@ Wraps a Cloud Run function handler with trace context propagation. Auto-initiali
 
 ### `configureGcpLogging(options?)` _(optional)_
 
-Call this **only** if you need custom options. The middleware auto-initialises with sensible defaults otherwise. If used, call it **once** at startup **before** the middleware.
+Call this **only** if you need custom options. The middleware auto-initialises with sensible defaults otherwise. If used, call it **once** at startup **before** the middleware (it is safe to call synchronously without `await` as it internally guards against duplicate initialization races).
 
 | Option         | Type      | Default                           | Description                                             |
 | -------------- | --------- | --------------------------------- | ------------------------------------------------------- |
