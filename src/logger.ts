@@ -42,11 +42,7 @@ export function isConfigured(): boolean {
  * need to call `configureGcpLogging()` themselves.
  */
 export function ensureConfigured(): Promise<void> {
-  if (configuredOnce) return Promise.resolve();
-  if (!initPromise) {
-    initPromise = configureGcpLogging();
-  }
-  return initPromise;
+  return configureGcpLogging();
 }
 
 /**
@@ -60,94 +56,100 @@ export function ensureConfigured(): Promise<void> {
  * `logLevel` or `serviceName`). If you do, call it **once** at application
  * startup, **before** the middleware or any logging runs.
  */
-export async function configureGcpLogging(options: GcpLoggingConfig = {}): Promise<void> {
-  const projectId = detectProjectId(options.projectId);
-  const environment = options.environment || process.env.NODE_ENV || 'development';
-  const logLevel = options.logLevel || (environment === 'development' ? 'debug' : 'info');
-  const isDev = environment === 'development';
+export function configureGcpLogging(options: GcpLoggingConfig = {}): Promise<void> {
+  if (initPromise) return initPromise;
 
-  setProjectId(projectId);
+  initPromise = (async () => {
+    const projectId = detectProjectId(options.projectId);
+    const environment = options.environment || process.env.NODE_ENV || 'development';
+    const logLevel = options.logLevel || (environment === 'development' ? 'debug' : 'info');
+    const isDev = environment === 'development';
 
-  if (!isDev && !projectId) {
-    console.warn('nodejs-gcp-log-correlation: No GCP Project ID detected. Trace correlation may not work properly.');
-  }
+    setProjectId(projectId);
 
-  // ── Patch global console (default: true) ──────────────────────────
-  const colorize = options.colorize !== false && isDev;
-  if (options.patchConsole !== false) {
-    patchConsole(isDev, colorize);
-  }
+    if (!isDev && !projectId) {
+      console.warn('nodejs-gcp-log-correlation: No GCP Project ID detected. Trace correlation may not work properly.');
+    }
 
-  // ── Sink selection ────────────────────────────────────────────────
-  const contextLocalStorage = new AsyncLocalStorage<Record<string, unknown>>();
-  setContextStorage(contextLocalStorage);
+    // ── Patch global console (default: true) ──────────────────────────
+    const colorize = options.colorize !== false && isDev;
+    if (options.patchConsole !== false) {
+      patchConsole(isDev, colorize);
+    }
 
-  if (isDev) {
-    // Dev: use LogTape's native console sink with ANSI colors (no Winston needed)
-    await configure({
-      sinks: {
-        console: getConsoleSink({
-          formatter: colorize ? ansiColorFormatter : undefined,
-        }),
-      },
-      loggers: [
-        { category: [], sinks: ['console'], lowestLevel: mapToLogtapeLevel(logLevel) },
-        { category: ['logtape', 'meta'], sinks: ['console'], lowestLevel: 'warning' },
-      ],
-      contextLocalStorage,
-    });
-  } else {
-    // Production: GCP Cloud Logging via stdout JSON
-    const winstonLogger = winston.createLogger({
-      level: logLevel,
-      transports: [
-        new winston.transports.Console({
-          format: winston.format.printf(info => {
-            const { level, message, ...meta } = info;
+    // ── Sink selection ────────────────────────────────────────────────
+    const contextLocalStorage = new AsyncLocalStorage<Record<string, unknown>>();
+    setContextStorage(contextLocalStorage);
 
-            // Map Winston levels to GCP severity
-            const severityMap: Record<string, string> = {
-              silly: 'DEFAULT',
-              trace: 'DEBUG',
-              debug: 'DEBUG',
-              verbose: 'DEBUG',
-              info: 'INFO',
-              warn: 'WARNING',
-              warning: 'WARNING',
-              error: 'ERROR',
-              fatal: 'CRITICAL',
-              critical: 'CRITICAL',
-            };
-
-            const gcpLogEntry: Record<string, unknown> = {
-              severity: severityMap[level] || 'INFO',
-              message,
-              ...meta,
-            };
-
-            if (options.serviceName) {
-              gcpLogEntry.serviceContext = { service: options.serviceName };
-            }
-
-            return JSON.stringify(gcpLogEntry);
+    if (isDev) {
+      // Dev: use LogTape's native console sink with ANSI colors (no Winston needed)
+      await configure({
+        sinks: {
+          console: getConsoleSink({
+            formatter: colorize ? ansiColorFormatter : undefined,
           }),
-        }),
-      ],
-    });
+        },
+        loggers: [
+          { category: [], sinks: ['console'], lowestLevel: mapToLogtapeLevel(logLevel) },
+          { category: ['logtape', 'meta'], sinks: ['console'], lowestLevel: 'warning' },
+        ],
+        contextLocalStorage,
+      });
+    } else {
+      // Production: GCP Cloud Logging via stdout JSON
+      const winstonLogger = winston.createLogger({
+        level: logLevel,
+        transports: [
+          new winston.transports.Console({
+            format: winston.format.printf(info => {
+              const { level, message, ...meta } = info;
 
-    await configure({
-      sinks: {
-        gcp: getWinstonSink(winstonLogger),
-      },
-      loggers: [
-        { category: [], sinks: ['gcp'], lowestLevel: mapToLogtapeLevel(logLevel) },
-        { category: ['logtape', 'meta'], sinks: ['gcp'], lowestLevel: 'warning' },
-      ],
-      contextLocalStorage,
-    });
-  }
+              // Map Winston levels to GCP severity
+              const severityMap: Record<string, string> = {
+                silly: 'DEFAULT',
+                trace: 'DEBUG',
+                debug: 'DEBUG',
+                verbose: 'DEBUG',
+                info: 'INFO',
+                warn: 'WARNING',
+                warning: 'WARNING',
+                error: 'ERROR',
+                fatal: 'CRITICAL',
+                critical: 'CRITICAL',
+              };
 
-  configuredOnce = true;
+              const gcpLogEntry: Record<string, unknown> = {
+                severity: severityMap[level] || 'INFO',
+                message,
+                ...meta,
+              };
+
+              if (options.serviceName) {
+                gcpLogEntry.serviceContext = { service: options.serviceName };
+              }
+
+              return JSON.stringify(gcpLogEntry);
+            }),
+          }),
+        ],
+      });
+
+      await configure({
+        sinks: {
+          gcp: getWinstonSink(winstonLogger),
+        },
+        loggers: [
+          { category: [], sinks: ['gcp'], lowestLevel: mapToLogtapeLevel(logLevel) },
+          { category: ['logtape', 'meta'], sinks: ['gcp'], lowestLevel: 'warning' },
+        ],
+        contextLocalStorage,
+      });
+    }
+
+    configuredOnce = true;
+  })();
+
+  return initPromise;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────
